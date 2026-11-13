@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FocusGrid Life OS — Tableau de bord personnel</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+if (typeof tailwind !== 'undefined') {
+  tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: { fontFamily: { sans: ['Inter','ui-sans-serif','system-ui','sans-serif'] } } }
+  }
+}
+</script>
+<style>
+  html { scroll-behavior:smooth; }
+  body { font-family:'Inter',sans-serif; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#334155; border-radius:8px; }
+  ::-webkit-scrollbar-thumb:hover { background:#475569; }
+  .fade-in { animation:fadeIn .35s ease both; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:none;} }
+  .hm-cell { transition: transform .12s ease, box-shadow .12s ease; }
+  .hm-cell:hover { transform:scale(1.25); box-shadow:0 0 0 1px rgba(148,163,184,.4); z-index:5; }
+  .card-hover { transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  .card-hover:hover { transform:translateY(-2px); box-shadow:0 10px 30px -12px rgba(0,0,0,.6); }
+  .drop-active { outline:2px dashed rgba(129,140,248,.8); outline-offset:-6px; background:rgba(99,102,241,.06)!important; }
+  .dragging { opacity:.4; }
+  input[type=range] { accent-color:#818cf8; }
+  #tooltip { pointer-events:none; transition:opacity .1s ease; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen antialiased">
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3 flex-wrap">
+    <div class="flex items-center gap-3 mr-auto">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center shadow-lg shadow-indigo-500/30">
+        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6z"/></svg>
+      </div>
+      <div>
+        <h1 class="text-lg font-extrabold tracking-tight text-white leading-tight">FocusGrid <span class="text-indigo-400">Life OS</span></h1>
+        <p id="header-date" class="text-[11px] text-slate-500 leading-tight"></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800">
+        <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Score du jour</span>
+        <span id="header-score" class="text-lg font-extrabold text-emerald-400">—</span>
+      </div>
+      <button onclick="loadDemo()" class="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-600 transition">Démo</button>
+      <button onclick="wipeAll()" class="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-rose-300/80 hover:text-rose-300 hover:border-rose-500/50 transition">Réinitialiser</button>
+    </div>
+  </div>
+  <nav class="max-w-7xl mx-auto px-4 sm:px-6 pb-3">
+    <div id="tabs" class="flex gap-1.5 overflow-x-auto rounded-2xl bg-slate-900/70 border border-slate-800 p-1.5">
+      <button data-tab="global"   class="tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl">🌍 Vue Globale</button>
+      <button data-tab="habits"   class="tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl">🔥 Habitudes &amp; Heatmap</button>
+      <button data-tab="checkin"  class="tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl">⚡ Check-in &amp; Écran</button>
+      <button data-tab="matrix"   class="tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl">🎯 Eisenhower</button>
+      <button data-tab="goals"    class="tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl">🏔️ Objectifs &amp; Piliers</button>
+    </div>
+  </nav>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24">
+
+  <!-- 1. VUE GLOBALE -->
+  <section id="view-global" class="view fade-in space-y-6">
+    <div id="global-cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"></div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5 card-hover">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-bold text-white">Régularité — 16 semaines</h2>
+            <p class="text-xs text-slate-500">Score unifié quotidien · onglet Heatmap pour le détail</p>
+          </div>
+          <span id="global-streak" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"></span>
+        </div>
+        <div id="global-heatmap"></div>
+      </div>
+      <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5 card-hover">
+        <div class="mb-4">
+          <h2 class="font-bold text-white">Énergie vs Écran — 7 jours</h2>
+          <p class="text-xs text-slate-500">Croisement énergie (courbe) et temps d'écran (barres)</p>
+        </div>
+        <div id="global-chart"></div>
+      </div>
+    </div>
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5 card-hover">
+      <h2 class="font-bold text-white mb-1">Résumé exécutif</h2>
+      <p class="text-xs text-slate-500 mb-4">Votre journée en une phrase, générée à partir des données.</p>
+      <p id="global-summary" class="text-sm leading-relaxed text-slate-300 bg-slate-950/60 border border-slate-800 rounded-xl p-4"></p>
+    </div>
+  </section>
+
+  <!-- 2. HABITUDES & HEATMAP -->
+  <section id="view-habits" class="view hidden fade-in space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 space-y-4">
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+          <h2 class="font-bold text-white mb-1">Habitudes du jour</h2>
+          <p class="text-xs text-slate-500 mb-4">Cochez vos routines — chaque coche nourrit le score (55%).</p>
+          <div class="flex gap-2 mb-4">
+            <input id="habit-name" type="text" placeholder="Nouvelle habitude…" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+            <select id="habit-pillar" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-sm focus:outline-none focus:border-indigo-500"></select>
+            <button onclick="addHabit()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition shadow-lg shadow-indigo-600/25">+</button>
+          </div>
+          <div id="habit-list" class="space-y-2"></div>
+        </div>
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Équilibre de vie <span class="text-slate-500 font-normal">(points par pilier)</span></h3>
+          <div id="pillar-balance" class="space-y-3"></div>
+        </div>
+      </div>
+      <div class="lg:col-span-3 rounded-2xl bg-slate-900 border border-slate-800 p-5">
+        <div class="flex items-center justify-between mb-1 flex-wrap gap-2">
+          <div>
+            <h2 class="font-bold text-white">Heatmap de régularité</h2>
+            <p class="text-xs text-slate-500">16 semaines × 7 jours · cliquez un jour passé pour ajuster son score</p>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-500">
+            <span>Moins</span>
+            <span class="w-3 h-3 rounded-[4px] bg-slate-800"></span>
+            <span class="w-3 h-3 rounded-[4px] bg-emerald-950"></span>
+            <span class="w-3 h-3 rounded-[4px] bg-emerald-800"></span>
+            <span class="w-3 h-3 rounded-[4px] bg-emerald-600"></span>
+            <span class="w-3 h-3 rounded-[4px] bg-emerald-400"></span>
+            <span>Plus</span>
+          </div>
+        </div>
+        <div id="heatmap" class="mt-4 overflow-x-auto pb-1"></div>
+        <div id="heatmap-legend-weeks" class="flex gap-2 text-[10px] text-slate-600 mt-2 overflow-x-auto"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. CHECK-IN & TEMPS D'ECRAN -->
+  <section id="view-checkin" class="view hidden fade-in space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div class="lg:col-span-2 rounded-2xl bg-slate-900 border border-slate-800 p-5 space-y-5">
+        <div>
+          <h2 class="font-bold text-white">Check-in quotidien</h2>
+          <p class="text-xs text-slate-500">Notez votre journée de 1 à 5 — pondération 15% du score.</p>
+        </div>
+        <div id="checkin-sliders" class="space-y-4"></div>
+        <div>
+          <label class="flex items-center justify-between text-sm font-semibold text-slate-300 mb-2">
+            <span>📱 Temps d'écran numérique</span>
+            <span id="screen-value" class="text-amber-300 font-bold"></span>
+          </label>
+          <div class="relative">
+            <input id="screen-time" type="number" min="0" max="24" step="0.5" placeholder="ex : 2.5" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-amber-500">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-semibold">heures</span>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm font-semibold text-emerald-300 mb-1 block">🏆 Victoire du jour</label>
+            <textarea id="journal-win" rows="2" placeholder="Qu'est-ce qui a bien marché aujourd'hui ?" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm placeholder-slate-600 focus:outline-none focus:border-emerald-500 resize-none"></textarea>
+          </div>
+          <div>
+            <label class="text-sm font-semibold text-rose-300 mb-1 block">🧱 Blocage / priorité à lever</label>
+            <textarea id="journal-block" rows="2" placeholder="Qu'est-ce qui vous a ralenti ?" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm placeholder-slate-600 focus:outline-none focus:border-rose-500 resize-none"></textarea>
+          </div>
+        </div>
+        <div id="checkin-status" class="text-xs text-slate-500"></div>
+      </div>
+      <div class="lg:col-span-3 space-y-6">
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+          <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div>
+              <h2 class="font-bold text-white">Graphique d'évolution</h2>
+              <p class="text-xs text-slate-500">Barres = temps d'écran · Courbes = énergie, clarté, sommeil</p>
+            </div>
+            <div class="flex gap-1 bg-slate-950 border border-slate-800 rounded-xl p-1">
+              <button data-period="7"  class="period-btn text-xs font-bold px-3 py-1.5 rounded-lg">7j</button>
+              <button data-period="14" class="period-btn text-xs font-bold px-3 py-1.5 rounded-lg">14j</button>
+              <button data-period="30" class="period-btn text-xs font-bold px-3 py-1.5 rounded-lg">30j</button>
+            </div>
+          </div>
+          <div id="main-chart"></div>
+          <div id="chart-legend" class="flex flex-wrap gap-4 mt-3 text-xs text-slate-400"></div>
+          <div id="chart-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4"></div>
+        </div>
+        <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Journal des derniers jours</h3>
+          <div id="journal-history" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. MATRICE EISENHOWER -->
+  <section id="view-matrix" class="view hidden fade-in space-y-6">
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Nouvelle tâche</label>
+          <input id="task-title" type="text" placeholder="Que faut-il faire ?" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm placeholder-slate-600 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Pilier</label>
+          <select id="task-pillar" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500"></select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Quadrant</label>
+          <select id="task-quadrant" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500">
+            <option value="Q1">Q1 · Urgent &amp; Important</option>
+            <option value="Q2" selected>Q2 · Planifier (Cap)</option>
+            <option value="Q3">Q3 · Déléguer</option>
+            <option value="Q4">Q4 · Éliminer</option>
+          </select>
+        </div>
+        <button onclick="addTask()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition shadow-lg shadow-indigo-600/25">Ajouter</button>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Filtrer par pilier</label>
+          <select id="task-filter" onchange="renderMatrix()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-indigo-500"></select>
+        </div>
+      </div>
+    </div>
+    <div id="matrix-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- 5. OBJECTIFS & PILIERS -->
+  <section id="view-goals" class="view hidden fade-in space-y-6">
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="flex-1 min-w-[200px]">
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Nouvel objectif à 90 jours</label>
+          <input id="goal-title" type="text" placeholder="ex : Lancer mon portfolio en ligne" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm placeholder-slate-600 focus:outline-none focus:border-violet-500">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Pilier</label>
+          <select id="goal-pillar" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-500"></select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1.5">Échéance</label>
+          <input id="goal-deadline" type="date" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-violet-500 [color-scheme:dark]">
+        </div>
+        <button onclick="addGoal()" class="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition shadow-lg shadow-violet-600/25">Ajouter</button>
+      </div>
+    </div>
+    <div id="goal-list" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+    <div class="rounded-2xl bg-slate-900 border border-slate-800 p-5">
+      <h2 class="font-bold text-white mb-1">Architecture de vie — les 5 piliers</h2>
+      <p class="text-xs text-slate-500 mb-4">Répartition des points accumulés (habitudes cochées, tâches terminées, jalons validés).</p>
+      <div id="pillar-cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3"></div>
+    </div>
+  </section>
+</main>
+
+<div id="tooltip" class="fixed z-50 hidden px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-xs text-slate-100 shadow-xl"></div>
+
+<div id="day-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+  <div class="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-700 p-6 fade-in">
+    <h3 class="font-bold text-white mb-1">Ajuster le score du jour</h3>
+    <p id="day-modal-date" class="text-xs text-slate-500 mb-5"></p>
+    <input id="day-modal-range" type="range" min="0" max="100" step="5" class="w-full">
+    <p class="text-center my-4"><span id="day-modal-value" class="text-4xl font-extrabold text-emerald-400">0</span><span class="text-slate-500 text-sm font-semibold"> / 100</span></p>
+    <div class="flex gap-2">
+      <button onclick="saveDayOverride()" class="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition">Enregistrer</button>
+      <button onclick="clearDayOverride()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition">Auto</button>
+      <button onclick="closeDayModal()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold transition">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-wrap" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+<script>
+/* ================= UTILS ================= */
+const $ = s => document.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const pad = n => String(n).padStart(2, '0');
+const dkey = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const today = () => dkey(new Date());
+const addDays = (key, n) => { const d = new Date(key + 'T12:00:00'); d.setDate(d.getDate() + n); return dkey(d); };
+const parseKey = key => new Date(key + 'T12:00:00');
+const fmtFr = key => parseKey(key).toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+const fmtShort = key => parseKey(key).toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'fade-in px-4 py-3 rounded-xl bg-slate-800 border border-slate-500/40 text-sm text-slate-100 shadow-xl max-w-xs';
+  el.textContent = msg;
+  $('#toast-wrap').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .4s'; setTimeout(() => el.remove(), 400); }, 2600);
+}
+
+/* ================= PILIERS ================= */
+const PILLARS = [
+  { id:'carriere', name:'Carrière & Études',     icon:'💼', hex:'#6366f1', badge:'bg-indigo-500/10 text-indigo-300 border-indigo-500/30',   bar:'bg-indigo-500',  text:'text-indigo-300'  },
+  { id:'sport',    name:'Sport & Santé',         icon:'💪', hex:'#10b981', badge:'bg-emerald-500/10 text-emerald-300 border-emerald-500/30', bar:'bg-emerald-500', text:'text-emerald-300' },
+  { id:'projets',  name:'Projets & Création',    icon:'🎨', hex:'#8b5cf6', badge:'bg-violet-500/10 text-violet-300 border-violet-500/30',    bar:'bg-violet-500',  text:'text-violet-300'  },
+  { id:'finances', name:'Finances & Admin',      icon:'💰', hex:'#f59e0b', badge:'bg-amber-500/10 text-amber-300 border-amber-500/30',       bar:'bg-amber-500',   text:'text-amber-300'   },
+  { id:'perso',    name:'Vie Perso & Entourage', icon:'❤️', hex:'#f43f5e', badge:'bg-rose-500/10 text-rose-300 border-rose-500/30',          bar:'bg-rose-500',    text:'text-rose-300'    },
+];
+const pillar = id => PILLARS.find(p => p.id === id) || PILLARS[0];
+
+const QUADRANTS = {
+  Q1: { title:'Q1 · Urgent & Important',         action:'Faire immédiatement',    border:'border-rose-500/40',   head:'text-rose-300',   chip:'bg-rose-500/10 text-rose-300 border-rose-500/30'   },
+  Q2: { title:'Q2 · Non Urgent & Important',     action:'Planifier & Agir — Cap', border:'border-indigo-500/40', head:'text-indigo-300', chip:'bg-indigo-500/10 text-indigo-300 border-indigo-500/30' },
+  Q3: { title:'Q3 · Urgent & Non Important',     action:'Déléguer',               border:'border-amber-500/40',  head:'text-amber-300',  chip:'bg-amber-500/10 text-amber-300 border-amber-500/30' },
+  Q4: { title:'Q4 · Non Urgent & Non Important', action:'Éliminer',               border:'border-slate-600/40',  head:'text-slate-400',  chip:'bg-slate-500/10 text-slate-400 border-slate-500/30' },
+};
+
+/* ================= ÉTAT ================= */
+const LS_KEY = 'focusgrid-lifeos-v1';
+let state = null;
+let chartPeriod = 7;
+
+function save() { localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function load() {
+  try { const raw = localStorage.getItem(LS_KEY); if (raw) return JSON.parse(raw); } catch (e) { return null; }
+  return null;
+}
+function freshState() {
+  return { habits: [], habitLog: {}, checkins: {}, tasks: [], objectives: [], scoreOverrides: {}, seeded: false };
+}
+
+/* ================= SCORE UNIFIÉ ================= */
+function dayScore(key) {
+  if (key in state.scoreOverrides) return state.scoreOverrides[key];
+  const active = state.habits.filter(h => h.createdAt <= key);
+  const doneH = active.filter(h => state.habitLog[key] && state.habitLog[key][h.id]).length;
+  const hScore = active.length ? doneH / active.length : 0;
+  const doneToday = state.tasks.filter(t => (t.quadrant === 'Q1' || t.quadrant === 'Q2') && t.done && t.doneAt === key).length;
+  const openCrit = state.tasks.filter(t => (t.quadrant === 'Q1' || t.quadrant === 'Q2') && t.createdAt <= key && (!t.done || (t.doneAt && t.doneAt > key))).length;
+  const tScore = (doneToday + openCrit) ? doneToday / (doneToday + openCrit) : 0;
+  const ci = state.checkins[key];
+  const cScore = ci ? (ci.energy + ci.clarity + ci.sleep) / 15 : 0;
+  return Math.round(100 * (0.55 * hScore + 0.30 * tScore + 0.15 * cScore));
+}
+function scoreLevel(s) {
+  if (s <= 0) return 0;
+  if (s < 25) return 1;
+  if (s < 50) return 2;
+  if (s < 75) return 3;
+  return 4;
+}
+const LEVEL_CLASSES = ['bg-slate-800/70', 'bg-emerald-950 border border-emerald-900/60', 'bg-emerald-800', 'bg-emerald-600', 'bg-emerald-400'];
+
+function streakCount() {
+  let s = 0, k = today();
+  if (dayScore(k) < 25) k = addDays(k, -1);
+  while (dayScore(k) >= 25) { s++; k = addDays(k, -1); }
+  return s;
+}
+
+/* ================= NAVIGATION ================= */
+function switchTab(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  const view = $('#view-' + name);
+  view.classList.remove('hidden');
+  view.classList.remove('fade-in'); void view.offsetWidth; view.classList.add('fade-in');
+  document.querySelectorAll('#tabs .tab-btn').forEach(b => {
+    const active = b.dataset.tab === name;
+    b.className = 'tab-btn whitespace-nowrap text-sm font-semibold px-4 py-2 rounded-xl ' +
+      (active ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'text-slate-400 hover:text-white hover:bg-slate-800');
+  });
+  renderAll();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ================= HEATMAP ================= */
+function heatmapDays() {
+  const t = parseKey(today());
+  const start = new Date(t); start.setDate(t.getDate() - 111);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const days = [];
+  for (let i = 0; i < 112; i++) { const d = new Date(start); d.setDate(start.getDate() + i); days.push(dkey(d)); }
+  return days;
+}
+function renderHeatmap(containerId, small) {
+  const days = heatmapDays();
+  const tk = today();
+  const cell = small ? 'w-2.5 h-2.5' : 'w-full aspect-square max-w-[26px]';
+  const gap = small ? 'gap-[3px]' : 'gap-1';
+  let html = '<div class="grid ' + gap + '" style="grid-template-rows:repeat(7,1fr);grid-auto-flow:column;width:max-content">';
+  let monthLabels = [], lastMonth = -1;
+  days.forEach((key, i) => {
+    if (i % 7 === 0) {
+      const dt = parseKey(key);
+      const m = dt.getMonth();
+      monthLabels.push(m !== lastMonth ? dt.toLocaleDateString('fr-FR', { month:'short' }) : '');
+      lastMonth = m;
+    }
+    if (key > tk) { html += '<div class="' + cell + ' rounded-[4px] bg-slate-900/40"></div>'; return; }
+    const lvl = scoreLevel(dayScore(key));
+    const isToday = key === tk;
+    const ring = isToday ? ' ring-2 ring-indigo-400 ring-offset-1 ring-offset-slate-900' : '';
+    html += '<div class="' + cell + ' hm-cell rounded-[4px] cursor-pointer ' + LEVEL_CLASSES[lvl] + ring + '" data-day="' + key + '"></div>';
+  });
+  html += '</div>';
+  const c = $(containerId);
+  c.innerHTML = html;
+  if (!small) {
+    $('#heatmap-legend-weeks').innerHTML = monthLabels.map(m => '<span class="w-[26px] text-center shrink-0">' + m + '</span>').join('');
+  }
+  c.querySelectorAll('[data-day]').forEach(el => {
+    const key = el.dataset.day;
+    if (key > tk) return;
+    el.addEventListener('mousemove', e => showTooltip(e, key));
+    el.addEventListener('mouseleave', hideTooltip);
+    if (key !== tk) el.addEventListener('click', () => openDayModal(key));
+  });
+}
+let tipEl = null;
+function showTooltip(e, key) {
+  tipEl = tipEl || $('#tooltip');
+  const s = dayScore(key);
+  const ci = state.checkins[key];
+  const doneH = state.habits.filter(h => state.habitLog[key] && state.habitLog[key][h.id]).length;
+  tipEl.innerHTML = '<div class="font-bold capitalize">' + fmtFr(key) + '</div>' +
+    '<div class="mt-1">Score : <b class="' + (s >= 75 ? 'text-emerald-400' : s >= 40 ? 'text-amber-300' : 'text-slate-400') + '">' + s + '/100</b></div>' +
+    '<div class="text-slate-400">Habitudes : ' + doneH + '/' + state.habits.filter(h => h.createdAt <= key).length + (ci ? ' · Écran : ' + ci.screen + ' h' : '') + '</div>' +
+    (key !== today() ? '<div class="text-indigo-300 mt-1">Clic → ajuster</div>' : '');
+  tipEl.classList.remove('hidden');
+  const r = e.target.getBoundingClientRect();
+  tipEl.style.left = clamp(r.left + r.width / 2 - 80, 8, window.innerWidth - 176) + 'px';
+  tipEl.style.top = (r.top - tipEl.offsetHeight - 8) + 'px';
+}
+function hideTooltip() { if (tipEl) tipEl.classList.add('hidden'); }
+
+/* Modal jour */
+let modalDay = null;
+function openDayModal(key) {
+  modalDay = key;
+  $('#day-modal-date').textContent = fmtFr(key);
+  const v = dayScore(key);
+  $('#day-modal-range').value = v;
+  $('#day-modal-value').textContent = v;
+  $('#day-modal').classList.remove('hidden');
+  $('#day-modal').classList.add('flex');
+}
+function closeDayModal() { $('#day-modal').classList.add('hidden'); $('#day-modal').classList.remove('flex'); }
+function saveDayOverride() {
+  state.scoreOverrides[modalDay] = parseInt($('#day-modal-range').value, 10);
+  save(); closeDayModal(); renderAll();
+  toast('Score du ' + fmtShort(modalDay) + ' mis à jour');
+}
+function clearDayOverride() {
+  delete state.scoreOverrides[modalDay];
+  save(); closeDayModal(); renderAll();
+  toast('Score recalculé automatiquement');
+}
+document.addEventListener('input', e => {
+  if (e.target.id === 'day-modal-range') $('#day-modal-value').textContent = e.target.value;
+});
+
+/* ================= HABITUDES ================= */
+function addHabit() {
+  const name = $('#habit-name').value.trim();
+  if (!name) return toast('Donnez un nom à votre habitude');
+  state.habits.push({ id: uid(), name: name, pillar: $('#habit-pillar').value, createdAt: today() });
+  $('#habit-name').value = '';
+  save(); renderAll();
+  toast('Habitude ajoutée ✨');
+}
+function deleteHabit(id) {
+  state.habits = state.habits.filter(h => h.id !== id);
+  Object.keys(state.habitLog).forEach(day => { delete state.habitLog[day][id]; });
+  save(); renderAll();
+  toast('Habitude supprimée');
+}
+function toggleHabit(id) {
+  const k = today();
+  state.habitLog[k] = state.habitLog[k] || {};
+  if (state.habitLog[k][id]) delete state.habitLog[k][id]; else state.habitLog[k][id] = true;
+  save(); renderAll();
+}
+function renderHabits() {
+  const k = today();
+  const list = $('#habit-list');
+  if (!state.habits.length) {
+    list.innerHTML = '<p class="text-sm text-slate-600 italic py-4 text-center">Aucune habitude pour l\'instant — ajoutez-en une ci-dessus.</p>';
+  } else {
+    list.innerHTML = state.habits.map(h => {
+      const p = pillar(h.pillar);
+      const done = !!(state.habitLog[k] && state.habitLog[k][h.id]);
+      return '<div class="flex items-center gap-3 p-3 rounded-xl border ' + (done ? 'bg-slate-950 border-emerald-500/30' : 'bg-slate-950/60 border-slate-800') + ' card-hover">' +
+        '<button onclick="toggleHabit(\'' + h.id + '\')" class="w-6 h-6 shrink-0 rounded-lg grid place-items-center border-2 transition ' + (done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 hover:border-emerald-400') + '">' +
+          (done ? '<svg class="w-4 h-4 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : '') +
+        '</button>' +
+        '<div class="flex-1 min-w-0">' +
+          '<p class="text-sm font-semibold truncate ' + (done ? 'text-slate-500 line-through' : 'text-slate-200') + '">' + esc(h.name) + '</p>' +
+          '<span class="inline-flex items-center gap-1 text-[10px] font-bold mt-0.5 ' + p.badge + ' border rounded-md px-1.5 py-0.5">' + p.icon + ' ' + p.name + '</span>' +
+        '</div>' +
+        '<button onclick="deleteHabit(\'' + h.id + '\')" class="text-slate-600 hover:text-rose-400 transition p-1">' +
+          '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
+        '</button></div>';
+    }).join('');
+  }
+  $('#global-streak').textContent = '🔥 Série : ' + streakCount() + ' j';
+
+  const points = {};
+  PILLARS.forEach(p => points[p.id] = 0);
+  Object.keys(state.habitLog).forEach(day => {
+    state.habits.forEach(h => { if (state.habitLog[day][h.id] && points[h.pillar] !== undefined) points[h.pillar]++; });
+  });
+  state.tasks.filter(t => t.done).forEach(t => { if (points[t.pillar] !== undefined) points[t.pillar] += 2; });
+  state.objectives.forEach(o => o.milestones.forEach(m => { if (m.done && points[o.pillar] !== undefined) points[o.pillar] += 3; }));
+  const total = Object.values(points).reduce((a, b) => a + b, 0) || 1;
+  $('#pillar-balance').innerHTML = PILLARS.map(p => {
+    const pct = Math.round(100 * points[p.id] / total);
+    return '<div>' +
+      '<div class="flex justify-between text-xs mb-1"><span class="font-semibold ' + p.text + '">' + p.icon + ' ' + p.name + '</span><span class="text-slate-500 font-bold">' + pct + '%</span></div>' +
+      '<div class="h-2 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full ' + p.bar + ' transition-all duration-500" style="width:' + pct + '%"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ================= CHECK-IN ================= */
+const CHECK_FIELDS = [
+  { key:'energy',  label:'Énergie physique',   emoji:'⚡', text:'text-emerald-300' },
+  { key:'clarity', label:'Clarté mentale',     emoji:'🧠', text:'text-indigo-300'  },
+  { key:'sleep',   label:'Qualité du sommeil', emoji:'🌙', text:'text-violet-300'  },
+];
+function ensureCheckin(k) {
+  if (!state.checkins[k]) state.checkins[k] = { energy:3, clarity:3, sleep:3, screen:'', victory:'', blocker:'' };
+  return state.checkins[k];
+}
+function renderCheckin() {
+  const k = today();
+  const ci = state.checkins[k] || { energy:3, clarity:3, sleep:3, screen:'', victory:'', blocker:'' };
+  $('#checkin-sliders').innerHTML = CHECK_FIELDS.map(f =>
+    '<div>' +
+      '<label class="flex items-center justify-between text-sm font-semibold text-slate-300 mb-1.5">' +
+        '<span>' + f.emoji + ' ' + f.label + '</span>' +
+        '<span class="' + f.text + ' font-extrabold" id="val-' + f.key + '">' + ci[f.key] + '/5</span>' +
+      '</label>' +
+      '<input type="range" min="1" max="5" step="1" value="' + ci[f.key] + '" data-check="' + f.key + '" class="w-full">' +
+      '<div class="flex justify-between text-[9px] text-slate-600 font-semibold px-0.5"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span></div>' +
+    '</div>').join('');
+  $('#screen-time').value = (ci.screen === undefined || ci.screen === null) ? '' : ci.screen;
+  $('#screen-value').textContent = ci.screen ? ci.screen + ' h' : '—';
+  $('#journal-win').value = ci.victory || '';
+  $('#journal-block').value = ci.blocker || '';
+  updateCheckinStatus();
+  document.querySelectorAll('[data-check]').forEach(sl => sl.addEventListener('input', e => {
+    const f = e.target.dataset.check;
+    ensureCheckin(today())[f] = parseInt(e.target.value, 10);
+    $('#val-' + f).textContent = e.target.value + '/5';
+    save(); updateCheckinStatus(); refreshLive();
+  }));
+}
+function updateCheckinStatus() {
+  const ci = state.checkins[today()];
+  $('#checkin-status').innerHTML = ci
+    ? '✅ Check-in enregistré — moyenne bien-être : <b class="text-emerald-400">' + ((ci.energy + ci.clarity + ci.sleep) / 3).toFixed(1) + '/5</b> (15% du score unifié).'
+    : '⏳ Aucun check-in aujourd\'hui — 15% du score unifié reste à prendre.';
+}
+function bindCheckinFields() {
+  $('#screen-time').addEventListener('input', e => {
+    const ci = ensureCheckin(today());
+    ci.screen = e.target.value === '' ? '' : clamp(parseFloat(e.target.value) || 0, 0, 24);
+    $('#screen-value').textContent = e.target.value === '' ? '—' : ci.screen + ' h';
+    save(); refreshLive();
+  });
+  $('#journal-win').addEventListener('input', e => { ensureCheckin(today()).victory = e.target.value; save(); renderJournalHistory(); });
+  $('#journal-block').addEventListener('input', e => { ensureCheckin(today()).blocker = e.target.value; save(); renderJournalHistory(); });
+  document.querySelectorAll('.period-btn').forEach(b => b.addEventListener('click', () => { chartPeriod = parseInt(b.dataset.period, 10); renderChart(); }));
+}
+function renderJournalHistory() {
+  const keys = Object.keys(state.checkins).sort().reverse().slice(0, 8).filter(k => state.checkins[k].victory || state.checkins[k].blocker);
+  $('#journal-history').innerHTML = keys.length ? keys.map(k => {
+    const ci = state.checkins[k];
+    return '<div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800">' +
+      '<p class="text-[11px] font-bold text-slate-400 capitalize mb-1.5">' + fmtFr(k) + '</p>' +
+      (ci.victory ? '<p class="text-xs text-emerald-300/90 mb-1">🏆 ' + esc(ci.victory) + '</p>' : '') +
+      (ci.blocker ? '<p class="text-xs text-rose-300/90">🧱 ' + esc(ci.blocker) + '</p>' : '') +
+    '</div>';
+  }).join('') : '<p class="text-sm text-slate-600 italic">Vos victoires et blocages apparaîtront ici.</p>';
+}
+
+/* ================= GRAPHIQUES SVG ================= */
+function lastDays(n) {
+  const out = [], t = parseKey(today());
+  for (let i = n - 1; i >= 0; i--) { const d = new Date(t); d.setDate(t.getDate() - i); out.push(dkey(d)); }
+  return out;
+}
+function smoothPath(pts) {
+  if (pts.length < 2) return '';
+  let d = 'M ' + pts[0][0] + ',' + pts[0][1];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ' C ' + c1x.toFixed(1) + ',' + c1y.toFixed(1) + ' ' + c2x.toFixed(1) + ',' + c2y.toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+  }
+  return d;
+}
+const SERIES = [
+  { key:'energy',  label:'Énergie', color:'#34d399' },
+  { key:'clarity', label:'Clarté',  color:'#818cf8' },
+  { key:'sleep',   label:'Sommeil', color:'#c084fc' },
+];
+function renderChart() {
+  const days = lastDays(chartPeriod);
+  const cis = days.map(k => state.checkins[k]);
+  const maxScreen = Math.max(6, ...cis.map(c => (c && c.screen) || 0)) * 1.15;
+  const W = 800, H = 280, padL = 34, padR = 12, padT = 14, padB = 34;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const x = i => padL + (days.length === 1 ? iw / 2 : i * iw / (days.length - 1));
+  const yS = v => padT + ih * (1 - v / 5);
+  const yB = v => padT + ih * (1 - v / maxScreen);
+
+  let g = '';
+  [0, 1, 2, 3, 4, 5].forEach(v => {
+    g += '<line x1="' + padL + '" y1="' + yS(v) + '" x2="' + (W - padR) + '" y2="' + yS(v) + '" stroke="#1e293b" stroke-width="1"/>' +
+         '<text x="' + (padL - 7) + '" y="' + (yS(v) + 3.5) + '" fill="#64748b" font-size="10" text-anchor="end">' + v + '</text>';
+  });
+  const step = Math.ceil(days.length / 10);
+  days.forEach((k, i) => {
+    if (i % step !== 0 && i !== days.length - 1) return;
+    g += '<text x="' + x(i) + '" y="' + (H - 10) + '" fill="#64748b" font-size="10" text-anchor="middle">' + fmtShort(k) + '</text>';
+  });
+
+  const bw = Math.min(22, iw / days.length * 0.5);
+  const bars = cis.map((c, i) => {
+    const v = (c && c.screen) || 0;
+    if (!v) return '';
+    return '<rect x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + yB(v).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + (padT + ih - yB(v)).toFixed(1) + '" rx="3.5" fill="#f59e0b" opacity="0.35"/>';
+  }).join('');
+
+  const lines = SERIES.map(s => {
+    const pts = cis.map((c, i) => [x(i), yS(c && c[s.key] !== undefined ? c[s.key] : 3)]);
+    return '<path d="' + smoothPath(pts) + '" fill="none" stroke="' + s.color + '" stroke-width="2.5" stroke-linecap="round" opacity="0.95"/>' +
+      pts.map(p => '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" fill="#0f172a" stroke="' + s.color + '" stroke-width="2"/>').join('');
+  }).join('');
+
+  $('#main-chart').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-full h-auto">' + g + bars + lines + '</svg>';
+  $('#chart-legend').innerHTML =
+    '<span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500/40"></span>Temps d\'écran (h)</span>' +
+    SERIES.map(s => '<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background:' + s.color + '"></span>' + s.label + ' (1–5)</span>').join('');
+
+  const valid = cis.filter(Boolean);
+  const avg = f => valid.length ? (valid.reduce((a, c) => a + (parseFloat(c[f]) || 0), 0) / valid.length) : 0;
+  const stats = [
+    { label:'Écran moyen',  val: avg('screen').toFixed(1) + ' h',  color:'text-amber-300'   },
+    { label:'Énergie moy.', val: avg('energy').toFixed(1) + '/5',  color:'text-emerald-300' },
+    { label:'Clarté moy.',  val: avg('clarity').toFixed(1) + '/5', color:'text-indigo-300'  },
+    { label:'Sommeil moy.', val: avg('sleep').toFixed(1) + '/5',   color:'text-violet-300'  },
+  ];
+  $('#chart-stats').innerHTML = stats.map(s =>
+    '<div class="rounded-xl bg-slate-950/60 border border-slate-800 p-3">' +
+      '<p class="text-[10px] uppercase tracking-wider text-slate-500 font-bold">' + s.label + '</p>' +
+      '<p class="text-xl font-extrabold ' + s.color + ' mt-0.5">' + s.val + '</p>' +
+    '</div>').join('');
+
+  document.querySelectorAll('.period-btn').forEach(b => {
+    const on = parseInt(b.dataset.period, 10) === chartPeriod;
+    b.className = 'period-btn text-xs font-bold px-3 py-1.5 rounded-lg ' + (on ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white');
+  });
+}
+function renderGlobalChart() {
+  const days = lastDays(7);
+  const cis = days.map(k => state.checkins[k]);
+  const maxScreen = Math.max(6, ...cis.map(c => (c && c.screen) || 0)) * 1.15;
+  const W = 800, H = 220, padL = 30, padR = 10, padT = 12, padB = 28;
+  const iw = W - padL - padR, ih = H - padT - padB;
+  const x = i => padL + i * iw / 6;
+  const yS = v => padT + ih * (1 - v / 5);
+  const yB = v => padT + ih * (1 - v / maxScreen);
+  let g = '';
+  [0, 2.5, 5].forEach(v => g += '<line x1="' + padL + '" y1="' + yS(v) + '" x2="' + (W - padR) + '" y2="' + yS(v) + '" stroke="#1e293b"/>' +
+    '<text x="' + (padL - 6) + '" y="' + (yS(v) + 3) + '" fill="#64748b" font-size="9" text-anchor="end">' + v + '</text>');
+  days.forEach((k, i) => g += '<text x="' + x(i) + '" y="' + (H - 8) + '" fill="#64748b" font-size="9" text-anchor="middle">' + fmtShort(k) + '</text>');
+  const bw = Math.min(26, iw / 7 * 0.5);
+  const bars = cis.map((c, i) => {
+    const v = (c && c.screen) || 0; if (!v) return '';
+    return '<rect x="' + (x(i) - bw / 2).toFixed(1) + '" y="' + yB(v).toFixed(1) + '" width="' + bw + '" height="' + (padT + ih - yB(v)).toFixed(1) + '" rx="3" fill="#f59e0b" opacity="0.35"/>';
+  }).join('');
+  const pts = cis.map((c, i) => [x(i), yS(c && c.energy !== undefined ? c.energy : 3)]);
+  $('#global-chart').innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="w-full h-auto">' + g + bars +
+    '<path d="' + smoothPath(pts) + '" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"/>' +
+    pts.map(p => '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="#0f172a" stroke="#34d399" stroke-width="2"/>').join('') +
+  '</svg>';
+}
+
+/* ================= EISENHOWER ================= */
+function addTask() {
+  const title = $('#task-title').value.trim();
+  if (!title) return toast('Donnez un titre à la tâche');
+  state.tasks.push({ id: uid(), title: title, pillar: $('#task-pillar').value, quadrant: $('#task-quadrant').value, done: false, createdAt: today(), doneAt: null });
+  $('#task-title').value = '';
+  save(); renderAll();
+  toast('Tâche ajoutée au quadrant ' + $('#task-quadrant').value);
+}
+function moveTask(id, q) {
+  const t = state.tasks.find(t => t.id === id);
+  if (t && t.quadrant !== q) { t.quadrant = q; save(); renderAll(); }
+}
+function toggleTask(id) {
+  const t = state.tasks.find(t => t.id === id);
+  if (t) { t.done = !t.done; t.doneAt = t.done ? today() : null; save(); renderAll(); }
+}
+function deleteTask(id) { state.tasks = state.tasks.filter(t => t.id !== id); save(); renderAll(); toast('Tâche supprimée'); }
+
+let dragId = null;
+function bindDnD() {
+  document.querySelectorAll('.quadrant').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drop-active'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drop-active'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.classList.remove('drop-active');
+      if (dragId) moveTask(dragId, zone.dataset.q);
+      dragId = null;
+    });
+  });
+}
+function renderMatrix() {
+  const filter = $('#task-filter').value;
+  const visible = t => filter === 'all' || t.pillar === filter;
+  $('#matrix-grid').innerHTML = Object.keys(QUADRANTS).map(q => {
+    const cfg = QUADRANTS[q];
+    const tasks = state.tasks.filter(t => t.quadrant === q && visible(t));
+    return '<div class="quadrant rounded-2xl bg-slate-900 border ' + cfg.border + ' p-4 min-h-[220px]" data-q="' + q + '">' +
+      '<div class="flex items-center justify-between mb-3">' +
+        '<div><h3 class="font-bold ' + cfg.head + '">' + cfg.title + '</h3><p class="text-[11px] text-slate-500">' + cfg.action + '</p></div>' +
+        '<span class="text-xs font-bold px-2 py-1 rounded-lg border ' + cfg.chip + '">' + tasks.length + '</span>' +
+      '</div>' +
+      '<div class="space-y-2">' +
+      (tasks.length ? tasks.map(t => {
+        const p = pillar(t.pillar);
+        return '<div draggable="true" data-task="' + t.id + '" class="task-card group flex items-start gap-2.5 p-3 rounded-xl bg-slate-950 border ' + (t.done ? 'border-emerald-500/30 opacity-60' : 'border-slate-800') + ' cursor-grab active:cursor-grabbing card-hover">' +
+          '<button onclick="toggleTask(\'' + t.id + '\')" class="mt-0.5 w-5 h-5 shrink-0 rounded-md grid place-items-center border-2 transition ' + (t.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 hover:border-emerald-400') + '">' +
+            (t.done ? '<svg class="w-3.5 h-3.5 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : '') +
+          '</button>' +
+          '<div class="flex-1 min-w-0">' +
+            '<p class="text-sm font-semibold ' + (t.done ? 'line-through text-slate-500' : 'text-slate-200') + ' break-words">' + esc(t.title) + '</p>' +
+            '<span class="inline-flex items-center gap-1 text-[10px] font-bold mt-1 ' + p.badge + ' border rounded-md px-1.5 py-0.5">' + p.icon + ' ' + p.name + '</span>' +
+          '</div>' +
+          '<div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">' +
+            '<div class="flex gap-0.5">' +
+              Object.keys(QUADRANTS).map(qq => '<button onclick="moveTask(\'' + t.id + '\',\'' + qq + '\')" title="Déplacer vers ' + qq + '" class="w-5 h-5 rounded text-[9px] font-bold ' + (qq === q ? 'bg-slate-800 text-slate-600' : 'bg-slate-800 text-slate-400 hover:bg-indigo-600 hover:text-white') + ' transition">' + qq[1] + '</button>').join('') +
+            '</div>' +
+            '<button onclick="deleteTask(\'' + t.id + '\')" class="text-slate-600 hover:text-rose-400 transition self-end p-0.5">' +
+              '<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
+            '</button>' +
+          '</div></div>';
+      }).join('') : '<p class="text-xs text-slate-600 italic text-center py-6">Glissez une tâche ici</p>') +
+      '</div></div>';
+  }).join('');
+  document.querySelectorAll('.task-card').forEach(card => {
+    card.addEventListener('dragstart', e => { dragId = card.dataset.task; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; });
+    card.addEventListener('dragend', () => { card.classList.remove('dragging'); dragId = null; });
+  });
+  bindDnD();
+}
+
+/* ================= OBJECTIFS 90 JOURS ================= */
+function addGoal() {
+  const title = $('#goal-title').value.trim();
+  const dl = $('#goal-deadline').value;
+  if (!title) return toast('Donnez un titre à votre objectif');
+  if (!dl) return toast('Choisissez une échéance');
+  state.objectives.push({ id: uid(), title: title, pillar: $('#goal-pillar').value, deadline: dl, milestones: [], createdAt: today() });
+  $('#goal-title').value = '';
+  save(); renderAll();
+  toast('Objectif à 90 jours ajouté 🏔️');
+}
+function deleteGoal(id) { state.objectives = state.objectives.filter(o => o.id !== id); save(); renderAll(); toast('Objectif supprimé'); }
+function addMilestone(gid) {
+  const o = state.objectives.find(o => o.id === gid);
+  const input = $('#ms-' + gid);
+  const text = input ? input.value.trim() : '';
+  if (!o || !text) return;
+  o.milestones.push({ id: uid(), text: text, done: false });
+  save(); renderAll();
+}
+function toggleMilestone(gid, mid) {
+  const o = state.objectives.find(o => o.id === gid);
+  const m = o && o.milestones.find(m => m.id === mid);
+  if (m) { m.done = !m.done; save(); renderAll(); }
+}
+function deleteMilestone(gid, mid) {
+  const o = state.objectives.find(o => o.id === gid);
+  if (o) { o.milestones = o.milestones.filter(m => m.id !== mid); save(); renderAll(); }
+}
+function renderGoals() {
+  const list = $('#goal-list');
+  if (!state.objectives.length) {
+    list.innerHTML = '<div class="rounded-2xl bg-slate-900 border border-dashed border-slate-700 p-10 text-center lg:col-span-2">' +
+      '<p class="text-4xl mb-3">🏔️</p><p class="text-slate-400 font-semibold">Aucun objectif trimestriel</p>' +
+      '<p class="text-sm text-slate-600 mt-1">Définissez un cap à 90 jours au-dessus.</p></div>';
+  } else {
+    list.innerHTML = state.objectives.map(o => {
+      const p = pillar(o.pillar);
+      const daysLeft = Math.ceil((parseKey(o.deadline) - parseKey(today())) / 86400000);
+      const done = o.milestones.filter(m => m.done).length;
+      const pct = o.milestones.length ? Math.round(100 * done / o.milestones.length) : 0;
+      const urgent = daysLeft <= 14;
+      return '<div class="rounded-2xl bg-slate-900 border border-slate-800 p-5 card-hover">' +
+        '<div class="flex items-start gap-3 mb-3">' +
+          '<div class="flex-1 min-w-0">' +
+            '<h3 class="font-bold text-white break-words">' + esc(o.title) + '</h3>' +
+            '<span class="inline-flex items-center gap-1 text-[10px] font-bold mt-1 ' + p.badge + ' border rounded-md px-1.5 py-0.5">' + p.icon + ' ' + p.name + '</span>' +
+          '</div>' +
+          '<div class="text-right shrink-0">' +
+            '<span class="text-xs font-extrabold px-2 py-1 rounded-lg border ' + (urgent ? 'bg-rose-500/10 text-rose-300 border-rose-500/30' : 'bg-slate-950 text-slate-300 border-slate-700') + '">J' + (daysLeft >= 0 ? '-' + daysLeft : '+' + (-daysLeft)) + '</span>' +
+            '<p class="text-[10px] text-slate-600 mt-1">' + fmtShort(o.deadline) + '</p>' +
+          '</div>' +
+          '<button onclick="deleteGoal(\'' + o.id + '\')" class="text-slate-600 hover:text-rose-400 transition p-1 shrink-0">' +
+            '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="flex items-center gap-3 mb-4">' +
+          '<div class="flex-1 h-2.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full ' + p.bar + ' transition-all duration-500" style="width:' + pct + '%"></div></div>' +
+          '<span class="text-xs font-extrabold ' + p.text + '">' + pct + '%</span>' +
+        '</div>' +
+        '<div class="space-y-1.5 mb-3">' +
+          o.milestones.map(m =>
+            '<div class="flex items-center gap-2.5 group">' +
+              '<button onclick="toggleMilestone(\'' + o.id + '\',\'' + m.id + '\')" class="w-[18px] h-[18px] shrink-0 rounded grid place-items-center border-2 transition ' + (m.done ? 'bg-emerald-500 border-emerald-500' : 'border-slate-600 hover:border-emerald-400') + '">' +
+                (m.done ? '<svg class="w-3 h-3 text-slate-950" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>' : '') +
+              '</button>' +
+              '<p class="flex-1 text-xs ' + (m.done ? 'line-through text-slate-500' : 'text-slate-300') + '">' + esc(m.text) + '</p>' +
+              '<button onclick="deleteMilestone(\'' + o.id + '\',\'' + m.id + '\')" class="text-slate-700 hover:text-rose-400 opacity-0 group-hover:opacity-100 transition">' +
+                '<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' +
+              '</button>' +
+            '</div>').join('') +
+        '</div>' +
+        '<div class="flex gap-2">' +
+          '<input id="ms-' + o.id + '" type="text" placeholder="Nouveau jalon…" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs placeholder-slate-600 focus:outline-none focus:border-violet-500">' +
+          '<button onclick="addMilestone(\'' + o.id + '\')" class="px-3 py-1.5 rounded-lg bg-violet-600/20 border border-violet-500/40 text-violet-300 text-xs font-bold hover:bg-violet-600/40 transition">+ Jalon</button>' +
+        '</div></div>';
+    }).join('');
+  }
+  $('#pillar-cards').innerHTML = PILLARS.map(p => {
+    const nH = state.habits.filter(h => h.pillar === p.id).length;
+    const nT = state.tasks.filter(t => t.pillar === p.id && t.done).length;
+    const nG = state.objectives.filter(o => o.pillar === p.id).length;
+    return '<div class="rounded-2xl bg-slate-950/60 border border-slate-800 p-4 card-hover">' +
+      '<div class="flex items-center gap-2 mb-2">' +
+        '<span class="w-8 h-8 rounded-xl grid place-items-center text-lg" style="background:' + p.hex + '22">' + p.icon + '</span>' +
+        '<p class="text-xs font-bold ' + p.text + ' leading-tight">' + p.name + '</p>' +
+      '</div>' +
+      '<div class="flex gap-3 text-[10px] text-slate-500 font-semibold"><span>' + nH + ' hab.</span><span>' + nT + ' tâches ✓</span><span>' + nG + ' obj.</span></div>' +
+    '</div>';
+  }).join('');
+}
+
+/* ================= VUE GLOBALE ================= */
+function renderGlobal() {
+  const k = today();
+  const doneH = state.habits.filter(h => state.habitLog[k] && state.habitLog[k][h.id]).length;
+  const totH = state.habits.length;
+  const ci = state.checkins[k];
+  const openCrit = state.tasks.filter(t => (t.quadrant === 'Q1' || t.quadrant === 'Q2') && !t.done);
+  const dls = state.objectives.map(o => Math.ceil((parseKey(o.deadline) - parseKey(k)) / 86400000));
+  const minDl = dls.length ? Math.max(0, Math.min(...dls)) : 90;
+  const s = dayScore(k);
+
+  const cards = [
+    { tab:'habits',  icon:'✅', color:'indigo',  title:'Habitudes du jour',  big: doneH + '/' + totH, sub: totH ? Math.round(100 * doneH / totH) + '% complétées' : 'Aucune habitude', bar: totH ? Math.round(100 * doneH / totH) : 0 },
+    { tab:'checkin', icon:'⚡', color:'emerald', title:'Énergie & Écran',    big: ci ? ci.energy + '/5' : '—', sub: ci && ci.screen ? 'Écran : ' + ci.screen + ' h' : 'Check-in non rempli', bar: ci ? ci.energy * 20 : 0 },
+    { tab:'matrix',  icon:'🎯', color:'amber',   title:'Priorités Q1 / Q2',  big: '' + openCrit.length, sub: openCrit.length ? 'tâches critiques ouvertes' : 'Tout est sous contrôle 🎉', bar: state.tasks.length ? Math.round(100 * state.tasks.filter(t => t.done).length / state.tasks.length) : 0 },
+    { tab:'goals',   icon:'🏔️', color:'violet',  title:'Objectifs 90 jours', big: 'J-' + minDl, sub: state.objectives.length + ' objectif(s) en cours', bar: state.objectives.length ? Math.round(100 * state.objectives.reduce((a, o) => a + (o.milestones.length ? o.milestones.filter(m => m.done).length / o.milestones.length : 0), 0) / state.objectives.length) : 0 },
+  ];
+  const colorMap = {
+    indigo:  { bg:'bg-indigo-500/10',  ring:'hover:border-indigo-500/50',  bar:'bg-indigo-500'  },
+    emerald: { bg:'bg-emerald-500/10', ring:'hover:border-emerald-500/50', bar:'bg-emerald-500' },
+    amber:   { bg:'bg-amber-500/10',   ring:'hover:border-amber-500/50',   bar:'bg-amber-500'   },
+    violet:  { bg:'bg-violet-500/10',  ring:'hover:border-violet-500/50',  bar:'bg-violet-500'  },
+  };
+  $('#global-cards').innerHTML = cards.map(c => {
+    const m = colorMap[c.color];
+    return '<button onclick="switchTab(\'' + c.tab + '\')" class="text-left rounded-2xl bg-slate-900 border border-slate-800 ' + m.ring + ' p-5 card-hover group">' +
+      '<div class="flex items-center justify-between mb-3">' +
+        '<span class="w-10 h-10 rounded-xl ' + m.bg + ' grid place-items-center text-xl">' + c.icon + '</span>' +
+        '<svg class="w-4 h-4 text-slate-600 group-hover:text-slate-300 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>' +
+      '</div>' +
+      '<p class="text-xs font-semibold text-slate-500">' + c.title + '</p>' +
+      '<p class="text-3xl font-extrabold text-white mt-0.5">' + c.big + '</p>' +
+      '<p class="text-xs text-slate-500 mt-0.5">' + c.sub + '</p>' +
+      '<div class="h-1.5 rounded-full bg-slate-800 mt-3 overflow-hidden"><div class="h-full rounded-full ' + m.bar + ' transition-all duration-500" style="width:' + clamp(c.bar, 0, 100) + '%"></div></div>' +
+    '</button>';
+  }).join('');
+
+  renderHeatmap('#global-heatmap', true);
+  renderGlobalChart();
+
+  const week = lastDays(7).map(dayScore);
+  const avgWeek = Math.round(week.reduce((a, b) => a + b, 0) / 7);
+  const ranked = PILLARS.map(p => ({ p: p, n: state.habits.filter(h => h.pillar === p.id && state.habitLog[k] && state.habitLog[k][h.id]).length })).sort((a, b) => b.n - a.n);
+  const best = ranked[0];
+  $('#global-summary').innerHTML =
+    'Score du jour : <b class="' + (s >= 75 ? 'text-emerald-400' : s >= 40 ? 'text-amber-300' : 'text-rose-300') + '">' + s + '/100</b> · ' +
+    'moyenne 7 jours : <b class="text-white">' + avgWeek + '/100</b> · série en cours : <b class="text-emerald-300">' + streakCount() + ' jour(s)</b>. ' +
+    (openCrit.length ? 'Vous avez <b class="text-amber-300">' + openCrit.length + ' tâche(s) critique(s)</b> en Q1/Q2 à traiter. ' : 'Aucune tâche critique restante — excellent tri. ') +
+    (ci ? 'Énergie à ' + ci.energy + '/5 avec ' + (ci.screen ? ci.screen + ' h d\'écran' : 'écran non saisi') + '. ' : 'Le check-in du jour n\'est pas rempli (15% du score en jeu). ') +
+    (best && best.n ? 'Pilier dominant aujourd\'hui : <b class="' + best.p.text + '">' + best.p.icon + ' ' + best.p.name + '</b>.' : 'Cochez au moins une habitude pour lancer la journée.');
+}
+
+/* ================= RENDU GLOBAL ================= */
+function refreshLive() {
+  $('#header-score').textContent = dayScore(today()) + '/100';
+  renderHeatmap('#heatmap', false);
+  renderHeatmap('#global-heatmap', true);
+  renderGlobalChart();
+  renderChart();
+}
+function renderAll() {
+  $('#header-date').textContent = fmtFr(today());
+  $('#header-score').textContent = dayScore(today()) + '/100';
+  renderGlobal();
+  renderHabits();
+  renderCheckin();
+  renderChart();
+  renderJournalHistory();
+  renderMatrix();
+  renderGoals();
+  refreshLive();
+}
+
+/* ================= DÉMO / RESET ================= */
+function mulberry32(a) { return function() { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function loadDemo() {
+  state = freshState();
+  const rnd = mulberry32(424242);
+  const H = [
+    { name:'Lecture 30 min',              pillar:'carriere' },
+    { name:'Sport & mobilité',            pillar:'sport'    },
+    { name:'Avancer le side-project',     pillar:'projets'  },
+    { name:'Revue budget & factures',     pillar:'finances' },
+    { name:'Appel / message à un proche', pillar:'perso'    },
+  ];
+  H.forEach(h => state.habits.push({ id: uid(), name: h.name, pillar: h.pillar, createdAt: addDays(today(), -120) }));
+  const tk = today();
+  const wins = ['Session de sport validée', 'Avancé sur le portfolio', 'Budget à jour', 'Journée sans distraction'];
+  const blocks = ['Trop de notifications', 'Couché tard', 'Réunions imprévues'];
+  for (let i = 111; i >= 0; i--) {
+    const k = addDays(tk, -i);
+    const recency = 1 - i / 130;
+    state.habitLog[k] = {};
+    state.habits.forEach(h => { if (rnd() < 0.35 + 0.45 * recency) state.habitLog[k][h.id] = true; });
+    if (i < 30) {
+      const base = 2.6 + 0.8 * (1 - i / 30);
+      state.checkins[k] = {
+        energy: clamp(Math.round(base + rnd() * 2 - 0.8), 1, 5),
+        clarity: clamp(Math.round(base + rnd() * 2 - 0.9), 1, 5),
+        sleep: clamp(Math.round(base + rnd() * 2 - 0.7), 1, 5),
+        screen: Math.round((5.5 - 2.2 * (1 - i / 30) + rnd() * 2.4) * 2) / 2,
+        victory: i % 4 === 0 ? wins[Math.floor(i / 4) % 4] : '',
+        blocker: i % 5 === 2 ? blocks[Math.floor(i / 5) % 3] : '',
+      };
+    }
+  }
+  const T = [
+    { title:'Rendre le dossier fiscal',         q:'Q1', p:'finances', done:false },
+    { title:'Préparer la présentation client',  q:'Q1', p:'carriere', done:true  },
+    { title:'Planifier le programme sportif',   q:'Q2', p:'sport',    done:false },
+    { title:'Coder la v1 du portfolio',         q:'Q2', p:'projets',  done:true  },
+    { title:'Mettre en place virement épargne', q:'Q2', p:'finances', done:false },
+    { title:'Répondre aux messages pro',        q:'Q3', p:'carriere', done:false },
+    { title:'Acheter le cadeau de départ',      q:'Q3', p:'perso',    done:true  },
+    { title:'Scroll réseaux sociaux',           q:'Q4', p:'perso',    done:true  },
+    { title:'Trier les vieux mails',            q:'Q4', p:'finances', done:false },
+  ];
+  T.forEach((t, i) => state.tasks.push({ id: uid(), title: t.title, quadrant: t.q, pillar: t.p, done: t.done, createdAt: addDays(tk, -20 + i), doneAt: t.done ? addDays(tk, -3) : null }));
+  const G = [
+    { title:'Lancer le portfolio en ligne', p:'projets',  d:45, ms:[['Design validé',1],['Front terminé',1],['Nom de domaine acheté',0],['Mise en ligne',0]] },
+    { title:'Courir un semi-marathon',      p:'sport',    d:80, ms:[['Courir 10 km',1],['Courir 15 km',0],['Course officielle',0]] },
+    { title:'Épargner 2 000 €',             p:'finances', d:30, ms:[['700 € atteints',1],['1 400 € atteints',1],['2 000 € atteints',0]] },
+    { title:'Décrocher la promotion',       p:'carriere', d:60, ms:[['Feedback manager',0],['Dossier de preuves',0],['Entretien annuel',0]] },
+  ];
+  G.forEach(g => state.objectives.push({ id: uid(), title: g.title, pillar: g.p, deadline: addDays(tk, g.d), createdAt: addDays(tk, -10),
+    milestones: g.ms.map(m => ({ id: uid(), text: m[0], done: !!m[1] })) }));
+  state.seeded = true;
+  save(); renderAll();
+  toast('Jeu de données de démo chargé 🎉');
+}
+function wipeAll() {
+  if (!confirm('Effacer toutes les données FocusGrid de ce navigateur ?')) return;
+  state = freshState();
+  save(); renderAll();
+  toast('Données réinitialisées');
+}
+
+/* ================= INIT ================= */
+function init() {
+  state = load() || freshState();
+  ['#habit-pillar', '#task-pillar', '#task-filter', '#goal-pillar'].forEach(sel => {
+    const el = $(sel);
+    const withAll = sel === '#task-filter';
+    el.innerHTML = (withAll ? '<option value="all">Tous les piliers</option>' : '') +
+      PILLARS.map(p => '<option value="' + p.id + '">' + p.icon + ' ' + p.name + '</option>').join('');
+  });
+  $('#goal-deadline').value = addDays(today(), 90);
+  document.querySelectorAll('#tabs .tab-btn').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  $('#habit-name').addEventListener('keydown', e => { if (e.key === 'Enter') addHabit(); });
+  $('#task-title').addEventListener('keydown', e => { if (e.key === 'Enter') addTask(); });
+  $('#goal-title').addEventListener('keydown', e => { if (e.key === 'Enter') addGoal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDayModal(); });
+  $('#day-modal').addEventListener('click', e => { if (e.target.id === 'day-modal') closeDayModal(); });
+  bindCheckinFields();
+  if (!state.seeded && !state.habits.length && !state.tasks.length) loadDemo();
+  else renderAll();
+  switchTab('global');
+}
+init();
+</script>
+</body>
+</html>
